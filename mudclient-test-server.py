@@ -3,6 +3,7 @@ import socket
 import threading
 import os
 import time
+import zlib
 
 HOST = "0.0.0.0"
 PORT = 5050
@@ -30,19 +31,31 @@ ANSI_TEST = """
 
 UTF8_TEST = open("utf8-test.txt", "rb").read()
 
-def send(data):
-        data = data.replace(b"\n", b"\r\n")
-        return lambda sock: sendall(sock, data)
+IAC = bytes([255])
+WILL = bytes([251])
+TELOPT_MCCP2 = bytes([86])
+SE = bytes([240])
+SB = bytes([250])
 
-def slowsend(data):
+MCCP2_TEST = (b"""1. Note that this test is a unilateral negotiation, i.e the server\r\n2. does not wait for the response before starting encryption.\r\n""" + IAC + WILL + TELOPT_MCCP2 + IAC + SB + TELOPT_MCCP2 + IAC + SE + 
+  zlib.compress(b"3. This data's been compressed! Now we're going to finish the compression and carry on.\r\n4. The next line should be line 5.\r\n") +
+b"5. This is line five.\r\n")
+
+def send(data, newline_replace = False):
+    if newline_replace:
         data = data.replace(b"\n", b"\r\n")
-        def fn(sock):
-                view = memoryview(data)
-                while view:
-                        n = sock.send(view[0:12])
-                        view = view[n:]
-                        time.sleep(0.1)
-        return fn
+    return lambda sock: sendall(sock, data)
+
+def slowsend(data, newline_replace = False):
+    if newline_replace:
+        data = data.replace(b"\n", b"\r\n")
+    def fn(sock):
+            view = memoryview(data)
+            while view:
+                    n = sock.send(view[0:15])
+                    view = view[n:]
+                    time.sleep(0.1)
+    return fn
 
 
 OPTIONS = {
@@ -50,12 +63,17 @@ OPTIONS = {
     "ansi_slow": slowsend(ANSI_TEST),
     "utf": send(UTF8_TEST),
     "utf_slow": slowsend(UTF8_TEST),
+    "mccp2": send(MCCP2_TEST, newline_replace=False),
+    "mccp2_slow": slowsend(MCCP2_TEST, newline_replace=False)
 }
 
+HELLO = (
+    "Welcome to The Mud Client Test Server\r\n"
+    "How would you like to torture your mud client?\r\n").encode()
+
+
 MENU = (
-    "Welcome to The Mud Client Test Server\n"
-    "How would you like to torture your mud client?\n"
-    "Options are: " + ", ".join(OPTIONS) + "\n"
+    "Options are: " + ", ".join(OPTIONS) + "\r\n"
 ).encode()
 
 
@@ -67,24 +85,29 @@ def sendall(sock: socket.socket, data: bytes):
 
 
 def handle_client(conn: socket.socket, addr):
+    sendall(conn, HELLO)
+
     try:
-        sendall(conn, MENU)
 
-        conn.settimeout(60)
-        data = b""
-        while b"\n" not in data and len(data) < 4096:
-            chunk = conn.recv(1024)
-            if not chunk:
-                break
-            data += chunk
+        while True:
 
-        option = data.decode(errors="ignore").strip().split()[0] if data else ""
-        optionhandler = OPTIONS.get(option)
+            sendall(conn, MENU)
 
-        if not optionhandler:
-            return
+            conn.settimeout(60)
+            data = b""
+            while b"\n" not in data and len(data) < 4096:
+                chunk = conn.recv(1024)
+                if not chunk:
+                    break
+                data += chunk
 
-        optionhandler(conn)
+            option = data.decode(errors="ignore").strip().split()[0] if data else ""
+            optionhandler = OPTIONS.get(option)
+
+            if not optionhandler:
+                return
+
+            optionhandler(conn)
 
     finally:
         conn.close()
