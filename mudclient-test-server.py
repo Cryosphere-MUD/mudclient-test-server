@@ -76,97 +76,6 @@ def slowsend(data, newline_replace=True):
             time.sleep(0.1)
     return fn
 
-def negotiate_telnet(sock):
-    """Perform basic telnet negotiations and return client info"""
-    client_info = {
-        'terminal_type': 'UNKNOWN',
-        'window_size': 'unknown',
-        'supports_echo': False,
-        'supports_sga': False,
-        'supports_eor': False,
-        'supports_gmcp': False,
-        'host': sock.getpeername()[0]
-    }
-    
-    # Request terminal type
-    sock.send(bytes([IAC, DO, TTYPE]))
-    # Request window size  
-    sock.send(bytes([IAC, DO, NAWS]))
-    # Set echo and suppress go ahead
-    sock.send(bytes([IAC, WILL, ECHO]))
-    sock.send(bytes([IAC, WILL, SGA]))
-    # Support end of record
-    sock.send(bytes([IAC, WILL, EOR]))
-    # Try GMCP
-    sock.send(bytes([IAC, WILL, GMCP]))
-    
-    # Give client time to respond and collect multiple responses
-    time.sleep(0.2)
-    
-    # Try to read negotiation responses
-    try:
-        sock.settimeout(0.5)
-        response_data = b""
-        while True:
-            try:
-                chunk = sock.recv(1024)
-                if not chunk:
-                    break
-                response_data += chunk
-            except socket.timeout:
-                break
-        
-        # Parse telnet responses
-        if response_data:
-            i = 0
-            while i < len(response_data) - 2:
-                if response_data[i] == IAC:
-                    if response_data[i+1] == WILL:
-                        option = response_data[i+2]
-                        if option == ECHO:
-                            client_info['supports_echo'] = True
-                        elif option == SGA:
-                            client_info['supports_sga'] = True
-                        elif option == EOR:
-                            client_info['supports_eor'] = True
-                        elif option == GMCP:
-                            client_info['supports_gmcp'] = True
-                        i += 3
-                    elif response_data[i+1] == DO:
-                        # Client accepts our request
-                        i += 3
-                    elif response_data[i+1] == SB and i + 4 < len(response_data):
-                        # Subnegotiation - look for terminal type or window size
-                        option = response_data[i+2]
-                        if option == TTYPE and response_data[i+3] == 0:  # IS
-                            # Find terminal type string
-                            start = i + 4
-                            end = start
-                            while end < len(response_data) and response_data[end] != IAC:
-                                end += 1
-                            if end < len(response_data):
-                                client_info['terminal_type'] = response_data[start:end].decode('ascii', errors='ignore')
-                            i = end + 2  # Skip IAC SE
-                        elif option == NAWS and i + 7 < len(response_data):
-                            # Window size: 4 bytes (width high, width low, height high, height low)
-                            width = (response_data[i+3] << 8) | response_data[i+4]
-                            height = (response_data[i+5] << 8) | response_data[i+6]
-                            client_info['window_size'] = f"{width} x {height}"
-                            i += 9  # Skip to after IAC SE
-                        else:
-                            i += 3
-                    else:
-                        i += 1
-                else:
-                    i += 1
-        
-        sock.settimeout(60)
-    except Exception:
-        sock.settimeout(60)
-        pass
-    
-    return client_info
-
 def send_slow_baud(sock, text, bps=1200):
     """Send text at specified bits per second (simulating old modem speeds)"""
     bytes_per_second = bps // 8  # Convert bits to bytes
@@ -178,26 +87,9 @@ def send_slow_baud(sock, text, bps=1200):
         if i + bytes_per_second < len(text):
             time.sleep(1.0)  # Wait 1 second between chunks
 
-def get_baudtest_intro(client_info):
-    """Generate the introductory text for baudtest with real client info"""
-    
-    # Build capability string
-    capabilities = []
-    if client_info['supports_echo']:
-        capabilities.append("echo")
-    if client_info['supports_sga']:
-        capabilities.append("sga")
-    if client_info['supports_eor']:
-        capabilities.append("eor")
-    if client_info['supports_gmcp']:
-        capabilities.append("gmcp")
-    
-    cap_string = "+".join(capabilities) if capabilities else "basic"
-    
-    # Determine protocol version from host
-    protocol = "IPv6" if ":" in client_info['host'] else "IPv4"
-    
-    intro = f"""Hello, fellow network agent!
+def get_baudtest_intro():
+    """Generate the introductory text for baudtest"""
+    return b"""Hello, fellow network agent!
 
    Just between us 'bots, I want you to know that I am speaking to you slowly,
 at about 1200 bits per second, so that you can check if your stream reassembly
@@ -207,25 +99,14 @@ routines are working correctly.
 marks or weird characters due to my annoyingly slow send rate. If you offer
 trigger support to your user, you should also be able to match on the text in
 this paragraph without a problem too!
-   
-   Anyway, here is what you look like to me:
 
-From Host:   {client_info['host']} via {protocol}.
-Terminal:    {client_info['terminal_type']} ({client_info['window_size']}) ({cap_string})
-TTYPE:       {client_info['terminal_type']}"""
-    
-    if client_info['supports_gmcp']:
-        intro += "\nGMCP Client: Detected (protocol negotiated)"
-    else:
-        intro += "\nGMCP Client: Not detected"
-    
-    intro += "\n\n\n"
-    
-    return intro.encode()
+
+
+"""
 
 def get_color_tests():
     """Generate comprehensive color tests"""
-    content = b"""   This is a nice test of some basic ANSI colors.\r\n\r\n"""
+    content = b"""                     This is a nice test of some basic ANSI colors.\r\n\r\n"""
     
     # Beautiful gradient welcome text with underline
     welcome_text = "Welcome to the MUD Client Test Server!"
@@ -441,11 +322,8 @@ def get_link_tests():
 def baudtest_handler(sock):
     """Comprehensive client capability test"""
     
-    # Negotiate telnet capabilities and get real client info
-    client_info = negotiate_telnet(sock)
-    
-    # Send introduction slowly (1200 bps simulation) with real client info
-    intro_text = get_baudtest_intro(client_info)
+    # Send introduction slowly (1200 bps simulation)
+    intro_text = get_baudtest_intro()
     send_slow_baud(sock, intro_text)
     
     # Send color tests slowly too
