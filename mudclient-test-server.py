@@ -55,7 +55,7 @@ except FileNotFoundError:
     UTF8_TEST = b"UTF-8 test file not found"
 
 # MCCP2 test data
-MCCP2_TEST = (b"""1. Note that this test is a unilateral negotiation, i.e the server\r\n2. does not wait for the response before starting encryption.\r\n""" + 
+MCCP2_TEST = (b"""1. Note that this test is a unilateral negotiation, i.e the server\r\n2. does not wait for the response before starting compression.\r\n""" + 
               bytes([IAC, WILL, TELOPT_MCCP2]) + bytes([IAC, SB, TELOPT_MCCP2]) + bytes([IAC, SE]) + 
               zlib.compress(b"3. This data's been compressed! Now we're going to finish the compression and carry on.\r\n4. The next line should be line 5.\r\n") +
               b"5. This is line five.\r\n")
