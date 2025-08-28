@@ -2,6 +2,8 @@
 from testdata import ANSI_TEST, UTF8_TEST, MCCP2_TEST
 from mudsocket import send, slowsend
 
+from nawstest import nawstest_handler
+
 from baudtest import baudtest_handler
 
 OPTIONS = {
@@ -11,6 +13,7 @@ OPTIONS = {
     "utf_slow": slowsend(UTF8_TEST),
     "mccp2": send(MCCP2_TEST, newline_replace=False),
     "mccp2_slow": slowsend(MCCP2_TEST, newline_replace=False),
+    "naws": nawstest_handler,
     "baudtest": baudtest_handler,
 }
 

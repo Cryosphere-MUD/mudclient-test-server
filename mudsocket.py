@@ -4,7 +4,7 @@ import time
 def send(data, newline_replace=True):
     if newline_replace:
         data = data.replace(b"\n", b"\r\n")
-    return lambda sock: sendall(sock, data)
+    return lambda sock: sendall(sock, data, False)
 
 def slowsend(data, newline_replace=True):
     if newline_replace:
@@ -28,7 +28,11 @@ def send_slow_baud(sock, text, bps=1200):
         if i + bytes_per_second < len(text):
             time.sleep(1.0)  # Wait 1 second between chunks
 
-def sendall(sock: socket.socket, data: bytes):
+def sendall(sock: socket.socket, data, newline_replace = True):
+    if isinstance(data, str):
+        data = data.encode()
+    if newline_replace:
+        data = data.replace(b"\n", b"\r\n")
     view = memoryview(data)
     while view:
         n = sock.send(view)
