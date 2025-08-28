@@ -4,6 +4,8 @@ from mudsocket import send, slowsend
 
 from nawstest import nawstest_handler
 
+from optionscan import optionscan_handler
+
 from baudtest import baudtest_handler
 
 OPTIONS = {
@@ -14,6 +16,7 @@ OPTIONS = {
     "mccp2": send(MCCP2_TEST, newline_replace=False),
     "mccp2_slow": slowsend(MCCP2_TEST, newline_replace=False),
     "naws": nawstest_handler,
+    "optionscan": optionscan_handler,
     "baudtest": baudtest_handler,
 }
 
