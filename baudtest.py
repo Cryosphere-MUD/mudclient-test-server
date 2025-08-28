@@ -1,3 +1,5 @@
+from mudsocket import send_slow_baud
+
 def get_baudtest_intro():
     """Generate the introductory text for baudtest"""
     return b"""Hello, fellow network agent!
