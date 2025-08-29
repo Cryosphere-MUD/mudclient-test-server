@@ -1,7 +1,8 @@
 from telnetconstants import IAC, WILL, DO, DONT, WONT, SE, SB
 
 class TelnetState:
-        def __init__(self):
+        def __init__(self, sock):
+                self.sock = sock
                 self.mode = self.handle_data
                 self.subneg_option = None
                 self.subneg_str = bytes()
@@ -13,6 +14,32 @@ class TelnetState:
                 self.subneg_handlers = {}
                 self.neg_handler = None
 
+                self.lineending = None
+                self.dataline = None
+
+        def reset_handlers(self):
+                self.subneg_handlers = {}
+                self.neg_handler = None
+
+        def sendall(self, data, newline_replace = True):
+                if isinstance(data, str):
+                        data = data.encode()
+                if newline_replace:
+                        data = data.replace(b"\n", b"\r\n")
+                view = memoryview(data)
+                while view:
+                        n = self.sock.send(view)
+                        view = view[n:]
+
+        def readline(self):
+                while True:
+                        data = self.sock.recv(1)
+                        self.process(data)
+                        if line := self.dataline:
+                                self.dataline = None
+                                return line.decode(errors="ignore")
+                        
+
         def process(self, octet):
                 if isinstance(octet, bytes):
                         for ch in octet:
@@ -20,10 +47,23 @@ class TelnetState:
                 else:
                         self.mode(octet)
 
+        def handle_dataline(self, line):
+                self.dataline = line
+
         def handle_databyte(self, octet):
                 if self.subneg_option:
                         self.subneg_str += bytes([octet])
                 else:
+                        if self.lineending is None and octet in (10, 13):
+                                self.lineending = octet
+
+                        if octet == self.lineending:
+                                self.handle_dataline(self.data_str)
+                                self.data_str = bytes()
+                        
+                        if octet in (10, 13):
+                                return
+
                         self.data_str += bytes([octet])
 
         def handle_data(self, octet):

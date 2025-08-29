@@ -9,37 +9,34 @@ import datetime
 
 from baudtest import baudtest_handler
 
-from mudsocket import sendall
 from menu import HELLO, OPTIONS, MENU
+
+from telnet import TelnetState
 
 HOST = "0.0.0.0"
 PORT = 5050
 
 def handle_client(conn: socket.socket, addr):
-    sendall(conn, HELLO)
+    telnet = TelnetState(conn)
+
+    telnet.sendall(HELLO)
 
     try:
         while True:
-            sendall(conn, MENU)
+            telnet.reset()
+            telnet.sendall(MENU)
 
-            conn.settimeout(60)
-            data = b""
-            while b"\n" not in data and len(data) < 4096:
-                chunk = conn.recv(1024)
-                if not chunk:
-                    break
-                data += chunk
+            decoded = telnet.readline()
 
-            decoded = data.decode(errors="ignore").strip() if data else ""
             option = decoded.split()[0] if decoded.split() else ""
             optionhandler = OPTIONS.get(option)
 
             if not optionhandler:
                 if option:  # Only show error if they actually typed something
-                    sendall(conn, f"Unknown option: {option}\r\n".encode())
-                continue  # Go back to menu instead of returning
+                    telnet.sendall(f"Unknown option: {option}\r\n".encode())
+                    continue
 
-            optionhandler(conn)
+            optionhandler(telnet)
 
     finally:
         conn.close()
