@@ -66,6 +66,9 @@ GMCP = 201           # Generic MUD Communication Protocol
 
 MPLEX = 112          # Cryosphere's MPLEX protocol
 
+TTYPE_IS = 0
+TTYPE_SEND = 1
+
 def option_name(option):
     names = {
         BINARY: "BINARY",

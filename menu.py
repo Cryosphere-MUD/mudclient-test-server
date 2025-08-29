@@ -5,6 +5,9 @@ from mudsocket import send, slowsend
 from nawstest import nawstest_handler
 
 from optionscan import optionscan_handler
+from emptysubneg import emptysubneg_handler
+from echo import echo_handler
+from ttype import ttype_handler
 
 from baudtest import baudtest_handler
 
@@ -17,6 +20,9 @@ OPTIONS = {
     "mccp2_slow": slowsend(MCCP2_TEST, newline_replace=False),
     "naws": nawstest_handler,
     "optionscan": optionscan_handler,
+    "emptysubneg": emptysubneg_handler,
+    "echo": echo_handler,
+    "ttype": ttype_handler,
     "baudtest": baudtest_handler,
 }
 

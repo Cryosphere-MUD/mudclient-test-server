@@ -17,7 +17,7 @@ class TelnetState:
                 self.lineending = None
                 self.dataline = None
 
-        def reset_handlers(self):
+        def reset(self):
                 self.subneg_handlers = {}
                 self.neg_handler = None
 
