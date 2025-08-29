@@ -1,4 +1,6 @@
+import datetime
 from mudsocket import send_slow_baud
+from telnetconstants import IAC, WONT, DONT, ECHO
 
 def get_baudtest_intro():
     """Generate the introductory text for baudtest"""
@@ -232,32 +234,32 @@ def get_link_tests():
     
     return content
 
-def baudtest_handler(sock):
+def baudtest_handler(telnet):
     """Comprehensive client capability test"""
     
     # Send introduction slowly (1200 bps simulation)
     intro_text = get_baudtest_intro()
-    send_slow_baud(sock, intro_text)
+    send_slow_baud(telnet, intro_text)
     
     # Send color tests slowly too
     color_tests = get_color_tests()
-    send_slow_baud(sock, color_tests, bps=2400)  # Slightly faster but still slow
+    send_slow_baud(telnet, color_tests, bps=2400)  # Slightly faster but still slow
     
     # Send UTF-8 tests at normal speed
     utf8_tests = get_utf8_tests()
-    sendall(sock, utf8_tests)
+    telnet.sendall(utf8_tests)
     
     # Send emoji tests at normal speed
     emoji_tests = get_emoji_tests()
-    sendall(sock, emoji_tests)
+    telnet.sendall(emoji_tests)
     
     # Send link tests at normal speed
     link_tests = get_link_tests()
-    sendall(sock, link_tests)
+    telnet.sendall(link_tests)
     
     # Final message
-    sendall(sock, b"\r\n   And that's that. Hope it all worked out for you!\r\n\r\n")
+    telnet.sendall(b"\r\n   And that's that. Hope it all worked out for you!\r\n\r\n")
     
     # IMPORTANT: Turn echo back to the client
-    sock.send(bytes([IAC, WONT, ECHO]))  # Server will NOT echo anymore
-    sock.send(bytes([IAC, DONT, ECHO]))  # Client should resume local echo
+    telnet.sock.send(bytes([IAC, WONT, ECHO]))  # Server will NOT echo anymore
+    telnet.sock.send(bytes([IAC, DONT, ECHO]))  # Client should resume local echo
