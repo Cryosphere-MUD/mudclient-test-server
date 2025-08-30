@@ -1,274 +1,215 @@
-from telnetconstants import IAC, SB, SE, WILL, WONT, DO, DONT, TELOPT_MCCP4, TELOPT_MCCP2, command_name, option_name
+from telnetconstants import IAC, SB, SE, WILL, WONT, DO, DONT, TELOPT_MCCP4, TELOPT_MCCP2
 import zstandard as zstd
 import zlib
-import time
-import select
 
 MCCP4_ACCEPT_ENCODING = 1
 MCCP4_BEGIN_ENCODING = 2
 MCCP4_WONT = 3
 
-def validate_telnet_message(data):
-    """Validate telnet protocol message format"""
-    if len(data) < 3:
-        return False, "Message too short"
-        
-    if data[0] != IAC:
-        return False, "Invalid IAC start"
-        
-    # Check for subnegotiation
-    if len(data) >= 5 and data[1] == SB:
-        if data[-2] != IAC or data[-1] != SE:
-            return False, "Invalid subnegotiation end"
-        return True, "Valid subnegotiation"
-        
-    # Check for simple telnet commands
-    if len(data) == 3 and data[1] in [WILL, WONT, DO, DONT]:
-        return True, "Valid telnet command"
-        
-    return False, "Unknown message format"
-
-def read_telnet_responses(telnet, timeout=1.0):
-    """Read and display telnet responses from client"""
-    responses = []
-    start_time = time.time()
-    
-    while time.time() - start_time < timeout:
-        # Check if data is available
-        ready = select.select([telnet.sock], [], [], 0.1)
-        if ready[0]:
-            try:
-                data = telnet.sock.recv(1024)
-                if data:
-                    responses.append(data)
-                else:
-                    break
-            except:
-                break
-        elif responses:
-            break
-    
-    return b''.join(responses)
-
-def parse_telnet_commands(data):
-    """Parse telnet commands from client"""
-    i = 0
-    messages = []
-    mccp4_accept_encoding = None
-    
-    while i < len(data):
-        if i < len(data) and data[i] == IAC:
-            if i + 1 < len(data):
-                cmd = data[i+1]
-                
-                # Handle WILL/WONT/DO/DONT
-                if cmd in [WILL, WONT, DO, DONT]:
-                    if i + 2 < len(data):
-                        opt = data[i+2]
-                        cmd_name = command_name(cmd)
-                        opt_name = option_name(opt)
-                        messages.append(f"Client sent: IAC {cmd_name} {opt_name}")
-                        i += 3
-                        continue
-                        
-                # Handle subnegotiation
-                elif cmd == SB:
-                    # Find the SE
-                    se_pos = data.find(bytes([IAC, SE]), i)
-                    if se_pos != -1 and i + 2 < len(data):
-                        opt = data[i+2]
-                        subneg_data = data[i+3:se_pos]
-                        opt_name = option_name(opt)
-                        messages.append(f"Client sent: IAC SB {opt_name} [{len(subneg_data)} bytes] IAC SE")
-                        
-                        # Parse MCCP4 subnegotiation
-                        if opt == TELOPT_MCCP4 and subneg_data:
-                            if subneg_data[0] == MCCP4_ACCEPT_ENCODING:
-                                encodings = subneg_data[1:].decode('ascii', errors='ignore')
-                                messages.append(f"  -> ACCEPT_ENCODING: {encodings}")
-                                mccp4_accept_encoding = encodings
-                            elif subneg_data[0] == MCCP4_BEGIN_ENCODING:
-                                encoding = subneg_data[1:].decode('ascii', errors='ignore')
-                                messages.append(f"  -> BEGIN_ENCODING: {encoding}")
-                            elif subneg_data[0] == MCCP4_WONT:
-                                reason = subneg_data[1:].decode('ascii', errors='ignore') if len(subneg_data) > 1 else ""
-                                messages.append(f"  -> WONT: {reason}" if reason else "  -> WONT")
-                                
-                        i = se_pos + 2
-                        continue
-        i += 1
-    
-    return messages, mccp4_accept_encoding
-
 def mccp4_handler_zstd(telnet):
-    """MCCP4 handler with zstd compression"""
+    """MCCP4 handler following proper protocol from integration guide"""
     
-    # Send greeting (uncompressed)
-    telnet.sendall(b"=== MCCP4 Test with zstd ===\r\n")
-    telnet.sendall(b"Testing MCCP4 protocol with zstd compression\r\n\r\n")
+    # State tracking 
+    telnet.mccp4_state = {
+        'client_supports_mccp4': False,
+        'compression_started': False,
+        'do_received': False,
+        'accept_encoding_received': False,
+        'test_completed': False
+    }
     
-    # Step 1: Send IAC WILL COMPRESS4
-    print("1. Server sends: IAC WILL COMPRESS4")
-    will_message = bytes([IAC, WILL, TELOPT_MCCP4])
-    print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in will_message)}")
-    telnet.sock.sendall(will_message)  # Use raw socket
-    
-    # Step 2: Wait for client response
-    print("2. Waiting for client response...")
-    time.sleep(0.1)
-    response = read_telnet_responses(telnet, timeout=1.0)
-    
-    client_supports_mccp4 = False
-    client_accept_encoding = None
-    
-    if response:
-        print(f"   -> Received {len(response)} bytes from client")
-        print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in response[:50])}{'...' if len(response) > 50 else ''}")
-        
-        commands, accept_encoding = parse_telnet_commands(response)
-        for cmd in commands:
-            print(f"   {cmd}")
-        
-        # Check if client sent DO COMPRESS4
-        if bytes([IAC, DO, TELOPT_MCCP4]) in response:
-            client_supports_mccp4 = True
-            client_accept_encoding = accept_encoding
-            print("   -> Client supports MCCP4!")
-        else:
-            print("   -> Client does not support MCCP4")
-            return
-    else:
-        print("   -> No response from client")
-        return
-    
-    # Step 3: Handle ACCEPT_ENCODING
-    compression_method = "zstd"
-    if client_accept_encoding:
-        print(f"\n3. Client sent ACCEPT_ENCODING: {client_accept_encoding}")
-        if "zstd" not in client_accept_encoding:
-            print("   -> Client doesn't support zstd, sending WONT")
-            telnet.sock.sendall(bytes([IAC, WONT, TELOPT_MCCP4]))
-            return
-    else:
-        print("\n3. No ACCEPT_ENCODING received - using legacy fallback mode")
-    
-    # Step 4: Send BEGIN_ENCODING with "zstd" 
-    begin_encoding = bytes([
-        IAC, SB, TELOPT_MCCP4,
-        MCCP4_BEGIN_ENCODING,
-        ord('z'), ord('s'), ord('t'), ord('d'),  # Raw ASCII bytes for "zstd"
-        IAC, SE
-    ])
-    
-    print(f"\n4. Server sends: IAC SB COMPRESS4 BEGIN_ENCODING '{compression_method}' IAC SE")
-    print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in begin_encoding)}")
-    
-    telnet.sock.sendall(begin_encoding)  # Use raw socket
-    
-    # Give client time to initialize decompressor
-    time.sleep(0.01)
-    
-    print("5. Starting zstd compression (level 8)")
-    print("   -> Everything after BEGIN_ENCODING is compressed\n")
-    
-    # Step 6: Send compressed data using ZSTD streaming
-    compressor = zstd.ZstdCompressor(level=8)
-    
-    test_messages = [
-        b"[COMPRESSED] This message is compressed with zstd!\r\n",
-        b"[COMPRESSED] You're now receiving MCCP4 compressed data.\r\n",
-        b"[COMPRESSED] Compression level: 8 (optimal for MUDs)\r\n",
-        b"[COMPRESSED] This demonstrates MCCP4 protocol functionality.\r\n",
-        b"[COMPRESSED] Using streaming compression for efficiency.\r\n"
-    ]
-    
-    # Create streaming context for compression
-    ctx = compressor.chunker(chunk_size=8192)
-    
-    try:
-        for msg in test_messages:
-            # Compress this message with flush
-            compressed_chunks = list(ctx.compress(msg))
-            compressed_chunks.extend(ctx.flush())
-            
-            # Send all compressed chunks using raw socket
-            for chunk in compressed_chunks:
-                if chunk:
-                    telnet.sock.sendall(chunk)
+    def neg_handler(command, option):
+        """Handle telnet negotiation - this is called when client responds"""
+        if option == TELOPT_MCCP4:
+            if command == DO:
+                print("Client sent: IAC DO MCCP4")
+                telnet.mccp4_state['client_supports_mccp4'] = True
+                telnet.mccp4_state['do_received'] = True
+                telnet.sendall(">>> Client sent DO COMPRESS4! Waiting for ACCEPT_ENCODING...\n")
                     
-            print(f"   Sent (compressed): {msg.decode().strip()}")
-            time.sleep(0.1)
+            elif command == DONT:
+                print("Client sent: IAC DONT MCCP4")
+                telnet.sendall(">>> Client sent DONT COMPRESS4\n")
+    
+    def start_mccp4_compression(telnet_obj):
+        """Start MCCP4 compression immediately when DO is received"""
+        if telnet_obj.mccp4_state['compression_started']:
+            return
             
-        # Finalize compression stream
-        print("\n7. Ending MCCP4 compression frame")
-        final_chunks = list(ctx.finish())
-        for chunk in final_chunks:
-            if chunk:
-                telnet.sock.sendall(chunk)
-                print("   -> Final compression frame data sent")
+        telnet_obj.mccp4_state['compression_started'] = True
+        print(">>> Starting MCCP4 compression")
         
-        print("   -> Compression frame properly closed")
+        # Send BEGIN_ENCODING with "zstd" (this is the key MCCP4 command)
+        begin_encoding = bytes([
+            IAC, SB, TELOPT_MCCP4,
+            MCCP4_BEGIN_ENCODING,
+            ord('z'), ord('s'), ord('t'), ord('d'),  # "zstd" as raw bytes
+            IAC, SE
+        ])
         
-    except Exception as e:
-        print(f"   -> Compression error: {e}")
-        return
+        telnet_obj.sendall(">>> Server sends: IAC SB COMPRESS4 BEGIN_ENCODING 'zstd' IAC SE\n", newline_replace=False)
+        print(f">>> Sending BEGIN_ENCODING: {begin_encoding.hex()}")
+        telnet_obj.sendall(begin_encoding, newline_replace=False)
+        
+        # IMMEDIATELY send compressed data after BEGIN_ENCODING
+        print(">>> Sending compressed test data immediately...")
+        send_compressed_test_data(telnet_obj)
+        
+        # CRITICAL: End compression AFTER the compressed data stream is closed
+        # The end_mccp4_compression should be called AFTER stream is properly closed
+        print(">>> Ending compression...")
+        end_mccp4_compression(telnet_obj)
+        
+        # Mark that we've completed the compression test
+        telnet_obj.mccp4_state['test_completed'] = True
     
-    # Step 8: Send DONT signal (uncompressed)
-    print("8. Server sends: IAC DONT COMPRESS4 (uncompressed)")
-    telnet.sock.sendall(bytes([IAC, DONT, TELOPT_MCCP4]))
+    def send_compressed_test_data(telnet):
+        """Send compressed test messages as a single complete zstd frame"""
+        test_messages = [
+            b"[COMPRESSED] This message is compressed with zstd!\r\n",
+            b"[COMPRESSED] You're now receiving MCCP4 compressed data.\r\n",
+            b"[COMPRESSED] This demonstrates MCCP4 protocol functionality.\r\n",
+            b"[COMPRESSED] Using zstd compression for efficiency.\r\n"
+        ]
+
+        try:
+            # Create compressor
+            compressor = zstd.ZstdCompressor(
+                level=8,
+                write_content_size=False,
+                write_checksum=False,
+                write_dict_id=False
+            )
+
+            # Compress ALL messages into ONE complete frame
+            all_data = b"".join(test_messages)
+            compressed_frame = compressor.compress(all_data)
+
+            print(f">>> Sending complete zstd frame: {len(compressed_frame)} bytes")
+            telnet.sendall(compressed_frame, newline_replace=False)
+            print(f">>> Sent {len(all_data)} bytes as single compressed frame")
+
+        except Exception as e:
+            print(f">>> Compression error: {e}")
+            # Fallback to raw sending if streaming fails
+            for msg in test_messages:
+                telnet.sendall(msg, newline_replace=False)
     
-    # Step 9: Send uncompressed data
-    print("9. Sending uncompressed data again\n")
-    telnet.sock.sendall(b"\r\n[UNCOMPRESSED] Back to normal uncompressed text.\r\n")
-    telnet.sock.sendall(b"[UNCOMPRESSED] MCCP4 test complete!\r\n")
-    telnet.sock.sendall(b"[UNCOMPRESSED] If you saw the compressed messages, MCCP4 worked!\r\n\r\n")
+    def end_mccp4_compression(telnet):
+        """End MCCP4 compression like your MUD's compress4End function"""
+        print(">>> Server sends: IAC DONT COMPRESS4 (ending compression)")
+        telnet.sendall(bytes([IAC, DONT, TELOPT_MCCP4]), newline_replace=False)
+        
+        # Now send uncompressed data 
+        telnet.sendall("\n[UNCOMPRESSED] Back to normal uncompressed text.\n", newline_replace=False)
+        telnet.sendall("[UNCOMPRESSED] MCCP4 test complete!\n", newline_replace=False) 
+        telnet.sendall("[UNCOMPRESSED] If you saw the compressed messages, MCCP4 worked!\n\n", newline_replace=False)
     
-    print("   -> MCCP4 test completed successfully")
+    def mccp4_subneg_handler(data):
+        """Handle MCCP4 subnegotiation - looking for ACCEPT_ENCODING"""
+        if not data:
+            return
+            
+        if data[0] == MCCP4_ACCEPT_ENCODING:
+            # Extract encodings from subneg data
+            encodings = data[1:].decode('ascii', errors='ignore')
+            print(f">>> Client sent ACCEPT_ENCODING: {encodings}")
+            telnet.sendall(f">>> Client sent ACCEPT_ENCODING: {encodings}\n")
+            telnet.mccp4_state['accept_encoding_received'] = True
+            
+            # Check if client supports zstd
+            if 'zstd' in encodings:
+                telnet.sendall(">>> Client supports zstd! Starting compression...\n")
+                start_mccp4_compression(telnet)
+            else:
+                telnet.sendall(">>> Client does not support zstd, sending WONT\n")
+                telnet.sendall(bytes([IAC, WONT, TELOPT_MCCP4]), newline_replace=False)
+        else:
+            print(f">>> Unknown MCCP4 subnegotiation: {data[0]}")
+    
+    # Set up telnet negotiation handlers
+    telnet.neg_handler = neg_handler
+    telnet.subneg_handlers[TELOPT_MCCP4] = mccp4_subneg_handler
+    
+    # Store function references for persistence
+    telnet.mccp4_start_compression = start_mccp4_compression
+    
+    # Start MCCP4 protocol sequence
+    telnet.sendall("=== MCCP4 Test with zstd (Proper Protocol) ===\n", newline_replace=False)
+    telnet.sendall("Following integration guide protocol sequence\n\n", newline_replace=False)
+    
+    # Step 1: Send IAC WILL COMPRESS4 to offer compression
+    telnet.sendall("1. Server sends: IAC WILL COMPRESS4\n", newline_replace=False)
+    telnet.sendall(bytes([IAC, WILL, TELOPT_MCCP4]), newline_replace=False)
+    print(">>> Sent IAC WILL COMPRESS4")
+    
+    # Step 2: Wait for client to respond with IAC DO COMPRESS4 and ACCEPT_ENCODING
+    telnet.sendall("2. Waiting for client to send: IAC DO COMPRESS4\n", newline_replace=False)
+    telnet.sendall("3. Then waiting for: IAC SB COMPRESS4 ACCEPT_ENCODING ... IAC SE\n", newline_replace=False)
+    telnet.sendall("   (Proper MCCP4 protocol requires both steps)\n", newline_replace=False)
+    telnet.sendall("   Press enter to continue...\n", newline_replace=False)
+    
+    # Process client response via readline (this triggers telnet negotiation)
+    response = telnet.readline()
+    
+    # Check results
+    if telnet.mccp4_state.get('test_completed'):
+        telnet.sendall("4. SUCCESS: MCCP4 compression test completed!\n", newline_replace=False)
+        telnet.sendall("   If you saw the compressed messages above, MCCP4 worked!\n", newline_replace=False)
+    elif telnet.mccp4_state.get('do_received'):
+        if telnet.mccp4_state.get('accept_encoding_received'):
+            telnet.sendall("4. Client sent both DO and ACCEPT_ENCODING - check above for results\n", newline_replace=False)
+        else:
+            telnet.sendall("4. Client sent DO COMPRESS4 but no ACCEPT_ENCODING received\n", newline_replace=False)
+            telnet.sendall("   This means client doesn't support full MCCP4 protocol\n", newline_replace=False)
+            telnet.sendall("   (Some clients may need fallback mode)\n", newline_replace=False)
+    else:
+        telnet.sendall("4. Client does not support MCCP4 (no DO received)\n", newline_replace=False)
 
 def mccp4_handler_deflate(telnet):
-    """MCCP4 handler with deflate - switches to MCCP2 protocol since they're equivalent"""
+    """MCCP4 handler with deflate - uses MCCP2 protocol for deflate compression"""
     
-    telnet.sendall(b"=== MCCP4 Test with deflate (MCCP2 compatibility mode) ===\r\n")
-    telnet.sendall(b"MCCP4 deflate is equivalent to MCCP2 - switching to MCCP2 protocol\r\n\r\n")
+    # Track client capabilities for MCCP2
+    client_supports_mccp2 = False
+    
+    def neg_handler(command, option):
+        nonlocal client_supports_mccp2
+        if option == TELOPT_MCCP2:
+            if command == DO:
+                print("Client sent: IAC DO MCCP2")
+                client_supports_mccp2 = True
+                telnet.sendall("Client supports MCCP2!\n")
+            elif command == DONT:
+                print("Client sent: IAC DONT MCCP2")
+                telnet.sendall("Client does not support MCCP2\n")
+    
+    def mccp2_subneg_handler(data):
+        # MCCP2 doesn't use complex subnegotiation
+        pass
+    
+    # Set up handlers
+    telnet.neg_handler = neg_handler
+    telnet.subneg_handlers[TELOPT_MCCP2] = mccp2_subneg_handler
+    
+    telnet.sendall("=== MCCP4 Test with deflate (MCCP2 compatibility mode) ===\n")
+    telnet.sendall("MCCP4 deflate is equivalent to MCCP2 - switching to MCCP2 protocol\n\n")
     
     print("MCCP4 deflate requested - switching to MCCP2 protocol")
     
     # Step 1: Send IAC WILL MCCP2 (not MCCP4)
-    print("1. Server sends: IAC WILL MCCP2")
-    will_message = bytes([IAC, WILL, TELOPT_MCCP2])
-    print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in will_message)}")
-    telnet.sock.sendall(will_message)
+    telnet.sendall("1. Server sends: IAC WILL MCCP2\n")
+    telnet.sendall(bytes([IAC, WILL, TELOPT_MCCP2]), newline_replace=False)
     
-    # Step 2: Wait for client response
-    print("2. Waiting for client response...")
-    time.sleep(0.1)
-    response = read_telnet_responses(telnet, timeout=1.0)
-    
-    if response:
-        print(f"   -> Received {len(response)} bytes from client")
-        print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in response[:50])}{'...' if len(response) > 50 else ''}")
-        
-        # Check if client sent DO MCCP2
-        if bytes([IAC, DO, TELOPT_MCCP2]) in response:
-            print("   -> Client supports MCCP2!")
-        else:
-            print("   -> Client does not support MCCP2")
-            return
-    else:
-        print("   -> No response from client")
-        return
+    # Step 2: Proceed with MCCP2 setup
+    telnet.sendall("2. Proceeding with MCCP2 setup...\n")
     
     # Step 3: Start MCCP2 compression (simple IAC SB MCCP2 IAC SE)
-    print("\n3. Server sends: IAC SB MCCP2 IAC SE")
+    telnet.sendall("3. Server sends: IAC SB MCCP2 IAC SE\n")
     start_compression = bytes([IAC, SB, TELOPT_MCCP2, IAC, SE])
-    print(f"   -> Raw bytes: {' '.join(f'{b:02x}' for b in start_compression)}")
-    telnet.sock.sendall(start_compression)
+    telnet.sendall(start_compression, newline_replace=False)
     
-    # Give client time to initialize decompressor
-    time.sleep(0.01)
-    
-    print("4. Starting MCCP2 compression")
-    print("   -> Everything after this is compressed\n")
+    telnet.sendall("4. Starting MCCP2 compression\n")
+    telnet.sendall("   Everything after this is compressed\n\n")
     
     # Step 4: Send compressed data
     data_to_compress = (
@@ -282,51 +223,65 @@ def mccp4_handler_deflate(telnet):
         # Use standard zlib compression for MCCP2
         compressed_data = zlib.compress(data_to_compress)
         print(f"   -> Generated MCCP2 frame: {len(compressed_data)} bytes")
-        print(f"   -> Frame header: {' '.join(f'{b:02x}' for b in compressed_data[:8])}")
         
-        # Send the complete compressed frame using raw socket
-        telnet.sock.sendall(compressed_data)
+        # Send the complete compressed frame using telnet
+        telnet.sendall(compressed_data, newline_replace=False)
         print("   -> MCCP2 compressed data sent successfully")
-        
-        time.sleep(0.2)  # Give client time to decompress
         
     except Exception as e:
         print(f"   -> Compression error: {e}")
         return
     
     # Step 5: End compression - no explicit signal needed for MCCP2
-    print("\n5. MCCP2 compression complete")
-    print("6. Sending uncompressed data again\n")
+    print("5. MCCP2 compression complete")
+    telnet.sendall("6. Sending uncompressed data again\n\n")
     
     # Send uncompressed data
-    telnet.sock.sendall(b"\r\n[UNCOMPRESSED] Back to normal uncompressed text.\r\n")
-    telnet.sock.sendall(b"[UNCOMPRESSED] MCCP2 test complete!\r\n")  
-    telnet.sock.sendall(b"[UNCOMPRESSED] If you saw the compressed messages, MCCP2 worked!\r\n\r\n")
+    telnet.sendall("\n[UNCOMPRESSED] Back to normal uncompressed text.\n")
+    telnet.sendall("[UNCOMPRESSED] MCCP2 test complete!\n")  
+    telnet.sendall("[UNCOMPRESSED] If you saw the compressed messages, MCCP2 worked!\n\n")
     
     print("   -> MCCP2 test completed successfully")
 
 def mccp4_handler_fallback(telnet):
-    """Test MCCP4 fallback mode (no ACCEPT_ENCODING)"""
-    telnet.sendall(b"=== MCCP4 Fallback Mode (backward compatibility) ===\r\n\r\n")
-    telnet.sendall(b"Testing MCCP4 fallback mode (no ACCEPT_ENCODING)\r\n\r\n")
+    """Test MCCP4 fallback mode (no ACCEPT_ENCODING) using proper telnet state machine"""
+    
+    # Track client capabilities
+    client_supports_mccp4 = False
+    
+    def neg_handler(command, option):
+        nonlocal client_supports_mccp4
+        if option == TELOPT_MCCP4:
+            if command == DO:
+                print("Client sent: IAC DO MCCP4")
+                client_supports_mccp4 = True
+                telnet.sendall("Client supports MCCP4!\n")
+            elif command == DONT:
+                print("Client sent: IAC DONT MCCP4")
+                telnet.sendall("Client does not support MCCP4\n")
+    
+    def mccp4_subneg_handler(data):
+        # Fallback mode doesn't expect subnegotiation
+        if data:
+            telnet.sendall(f"Unexpected subnegotiation in fallback mode: {data}\n")
+    
+    # Set up handlers
+    telnet.neg_handler = neg_handler
+    telnet.subneg_handlers[TELOPT_MCCP4] = mccp4_subneg_handler
+    
+    telnet.sendall("=== MCCP4 Fallback Mode (backward compatibility) ===\n\n")
+    telnet.sendall("Testing MCCP4 fallback mode (no ACCEPT_ENCODING)\n\n")
     
     # Send WILL MCCP4
-    telnet.sendall(b"1. Server sends: IAC WILL MCCP4\r\n")
-    telnet.sendall(bytes([IAC, WILL, TELOPT_MCCP4]))
+    telnet.sendall("1. Server sends: IAC WILL MCCP4\n")
+    telnet.sendall(bytes([IAC, WILL, TELOPT_MCCP4]), newline_replace=False)
     
-    # Wait for DO response
-    response = read_telnet_responses(telnet, timeout=1.0)
-    if not response or bytes([IAC, DO, TELOPT_MCCP4]) not in response:
-        telnet.sendall(b"   Client doesn't support MCCP4\r\n")
-        return
-        
-    # Immediately start compression (fallback behavior)
-    telnet.sendall(b"2. Starting compression immediately (fallback mode)\r\n")
-    telnet.sendall(b"3. Server sends: IAC SB MCCP4 IAC SE\r\n")
+    # Proceed with fallback compression
+    telnet.sendall("2. Starting compression immediately (fallback mode)\n")
+    telnet.sendall("3. Server sends: IAC SB MCCP4 IAC SE\n")
     
     # Send old-style start sequence
-    telnet.sendall(bytes([IAC, SB, TELOPT_MCCP4, IAC, SE]))
-    time.sleep(0.01)
+    telnet.sendall(bytes([IAC, SB, TELOPT_MCCP4, IAC, SE]), newline_replace=False)
     
     # Send compressed data
     compressor = zstd.ZstdCompressor(level=8)
@@ -334,8 +289,54 @@ def mccp4_handler_fallback(telnet):
         b"[FALLBACK COMPRESSED] This uses the fallback MCCP4 protocol\r\n"
         b"[FALLBACK COMPRESSED] No BEGIN_ENCODING subnegotiation\r\n"
     )
-    telnet.sendall(compressed)
+    telnet.sendall(compressed, newline_replace=False)
     
     # End compression
-    telnet.sendall(bytes([IAC, DONT, TELOPT_MCCP4]))
-    telnet.sendall(b"\r\n[UNCOMPRESSED] Fallback mode test complete.\r\n")
+    telnet.sendall(bytes([IAC, DONT, TELOPT_MCCP4]), newline_replace=False)
+    telnet.sendall("\n[UNCOMPRESSED] Fallback mode test complete.\n")
+
+# Create static MCCP4 test data (like MCCP2_TEST) - but with proper protocol sequence
+def create_mccp4_test_data():
+    """Create static MCCP4 test data blob with proper protocol sequence"""
+    try:
+        compressor = zstd.ZstdCompressor(
+            level=1,
+            write_content_size=False,
+            write_checksum=False,
+            write_dict_id=False
+        )
+        
+        # Test messages to compress
+        test_data = (
+            b"[COMPRESSED] This message is compressed with zstd!\r\n"
+            b"[COMPRESSED] You're now receiving MCCP4 compressed data.\r\n"
+            b"[COMPRESSED] This demonstrates MCCP4 protocol functionality.\r\n"
+            b"[COMPRESSED] Using zstd compression for efficiency.\r\n"
+        )
+        
+        compressed_data = compressor.compress(test_data)
+        
+        # Build the complete MCCP4 test sequence following proper protocol
+        mccp4_test = (
+            b"=== MCCP4 Test with zstd (Simple) ===\r\n"
+            b"This test mimics MCCP2 approach - no negotiation waiting.\r\n"
+            b"1. Server sends: IAC WILL COMPRESS4\r\n" +
+            bytes([IAC, WILL, TELOPT_MCCP4]) +
+            b"2. Server immediately sends: IAC SB COMPRESS4 BEGIN_ENCODING 'zstd' IAC SE\r\n" +
+            bytes([IAC, SB, TELOPT_MCCP4, MCCP4_BEGIN_ENCODING, 
+                   ord('z'), ord('s'), ord('t'), ord('d'), IAC, SE]) +
+            b"3. Compressed data follows:\r\n" +
+            compressed_data +
+            bytes([IAC, DONT, TELOPT_MCCP4]) +  # End compression
+            b"4. [UNCOMPRESSED] Back to normal uncompressed text.\r\n"
+            b"5. [UNCOMPRESSED] MCCP4 test complete!\r\n"
+            b"6. [UNCOMPRESSED] If you saw the compressed messages, MCCP4 worked!\r\n"
+        )
+        
+        return mccp4_test
+        
+    except Exception as e:
+        return b"MCCP4 test data creation failed: " + str(e).encode() + b"\r\n"
+
+# Static MCCP4 test data
+MCCP4_TEST = create_mccp4_test_data()
