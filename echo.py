@@ -6,17 +6,17 @@ from telnetconstants import IAC, WILL, WONT, ECHO, command_name, option_name
 
 def echo_handler(telnetstate):
         
-        telnetstate.sendall(bytes([IAC, WILL, ECHO]), False)
+        telnetstate.send_bytes(bytes([IAC, WILL, ECHO]))
 
         def neg_handler(command, option):
                 opt_name = option_name(option)
-                telnetstate.sendall(f"from client: {command_name(command)} {opt_name}\n")
+                telnetstate.send_text(f"from client: {command_name(command)} {opt_name}\n")
 
         telnetstate.neg_handler = neg_handler
 
-        telnetstate.sendall("Now please enter in a password.\n")
+        telnetstate.send_text("Now please enter in a password.\n")
         
         telnetstate.readline()
 
-        telnetstate.sendall(bytes([IAC, WONT, ECHO]), False)
+        telnetstate.send_bytes(bytes([IAC, WONT, ECHO]))
 

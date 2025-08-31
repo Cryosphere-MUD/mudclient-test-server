@@ -21,7 +21,7 @@ this paragraph without a problem too!
 
 def get_color_tests():
     """Generate comprehensive color tests"""
-    content = b"""                     This is a nice test of some basic ANSI colors.\r\n\r\n"""
+    content = b"""                     This is a nice test of some basic ANSI colors.\n\n"""
     
     # Beautiful gradient welcome text with underline
     welcome_text = "Welcome to the MUD Client Test Server!"
@@ -35,7 +35,7 @@ def get_color_tests():
         content += f"\033[4;38;5;{color}m{char}\033[0m".encode()  # underlined and colored
     
     # Explicit reset to ensure underline is completely cleared
-    content += b"\033[24m\033[0m\r\n\r\n"
+    content += b"\033[24m\033[0m\n\n"
     
     # Basic ANSI colors
     content += b"          ANSI Normal: "
@@ -43,30 +43,30 @@ def get_color_tests():
     for code, name in colors:
         content += f"\033[{code}m{name} \033[0m".encode()
     
-    content += b"\r\n          ANSI Bolded: "
+    content += b"\n          ANSI Bolded: "
     for code, name in colors:
         content += f"\033[1;{code}m{name} \033[0m".encode()
     
-    content += b"\r\n          ANSI Bright: "
+    content += b"\n          ANSI Bright: "
     for code, name in colors:
         bright_code = code + 60 if code < 38 else code
         content += f"\033[{bright_code}m{name} \033[0m".encode()
     
     # Common ANSI attributes
-    content += b"\r\n\r\n                            Common ANSI Attributes:\r\n"
-    content += b"                               \033[1mBold\033[0m \033[2mFaint\033[0m \033[3mItalic\033[0m\r\n"
-    content += b"                           \033[4mUnderline\033[0m \033[5mBlink\033[0m \033[6mFastblink\033[0m\r\n"
-    content += b"                          \033[9mCrossedout\033[0m \033[21mDoubleul\033[0m \033[7mReverse\033[0m\r\n\r\n"
+    content += b"\n\n                            Common ANSI Attributes:\n"
+    content += b"                               \033[1mBold\033[0m \033[2mFaint\033[0m \033[3mItalic\033[0m\n"
+    content += b"                           \033[4mUnderline\033[0m \033[5mBlink\033[0m \033[6mFastblink\033[0m\n"
+    content += b"                          \033[9mCrossedout\033[0m \033[21mDoubleul\033[0m \033[7mReverse\033[0m\n\n"
     
     # 256-color palette with actual colored output, 72 characters wide
-    content += b"Indexed Palette\r\n"
+    content += b"Indexed Palette\n"
     # First 16 colors with proper spacing and actual colors
     for i in range(16):
         if i < 10:
             content += f"\033[38;5;{i}m{i}\033[0m ".encode()
         else:
             content += f"\033[38;5;{i}m{i}\033[0m ".encode()  # Added space after double digits too
-    content += b"\r\n"
+    content += b"\n"
     
     # Colors 16-255 in compact hex grid - fit 36 colors per line (72 chars)
     for row in range(7):  # 7 rows to fit 240 colors (16-255 = 240 colors)
@@ -74,7 +74,7 @@ def get_color_tests():
             color_num = 16 + row * 36 + col
             if color_num <= 255:
                 content += f"\033[38;5;{color_num}m{color_num:02X}\033[0m".encode()
-        content += b"\r\n"
+        content += b"\n"
     
     # Grayscale ramp 232-255 with actual colors, fit on one line
     content += b" "
@@ -82,15 +82,15 @@ def get_color_tests():
         content += f"\033[38;5;{i}m{i:03d}\033[0m".encode()  # 3 digits for 232-255
         if i < 255:
             content += b" "
-    content += b"\r\n"
+    content += b"\n"
     
     # Comprehensive background color tests
-    content += b"\r\n\r\nBackground Color Tests:\r\n"
+    content += b"\n\nBackground Color Tests:\n"
     
     # Create rainbow background gradient using truecolor
     import math
     
-    content += b"Rainbow Gradient (Truecolor backgrounds):\r\n"
+    content += b"Rainbow Gradient (Truecolor backgrounds):\n"
     # Generate rainbow gradient across 72 characters, just 2 lines
     for line in range(2):  # Reduced from 3 to 2 lines
         for i in range(72):
@@ -120,10 +120,10 @@ def get_color_tests():
             
             # Use truecolor background
             content += f"\033[48;2;{r};{g};{b}m \033[0m".encode()
-        content += b"\r\n"
+        content += b"\n"
     
     # Mixed foreground and background color tests
-    content += b"\r\nMixed Foreground/Background Tests:\r\n"
+    content += b"\nMixed Foreground/Background Tests:\n"
     
     # Test various combinations
     test_combinations = [
@@ -136,13 +136,13 @@ def get_color_tests():
     
     for fg, bg, desc in test_combinations:
         content += f"\033[38;5;{fg}m\033[48;5;{bg}m {desc} \033[0m ".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     # Gradient with text - single line test
-    content += b"Background gradient with white text:\r\n"
+    content += b"Background gradient with white text:\n"
     for i in range(72):  # Just one line of 72 characters
         content += f"\033[38;5;15m\033[48;5;{i}m▓\033[0m".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     return content
 
@@ -150,7 +150,7 @@ def get_utf8_tests():
     """Generate comprehensive UTF-8 tests"""
     current_time = datetime.datetime.now().strftime("%I:%M %p EST")
     
-    content = f" ⠕ ⠖ ⠌ ⠓ ⡡ Server time is {current_time}.≋≋╰⠝⠥😽 ⠕ ⠖ ⠌ ⠓ ⡡ \r\n\r\n".encode()
+    content = f" ⠕ ⠖ ⠌ ⠓ ⡡ Server time is {current_time}.≋≋╰⠝⠥😽 ⠕ ⠖ ⠌ ⠓ ⡡ \n\n".encode()
     
     # UTF-8 test with xterm colors: 238 for borders, 220 for text
     border_color = "\033[38;5;238m"  # Dark gray
@@ -158,8 +158,8 @@ def get_utf8_tests():
     reset = "\033[0m"
     
     # Build the UTF-8 table with proper formatting
-    content += f"UTF-8 Test:\r\n".encode()
-    content += f"          {border_color}╭────────────────────────────────────────────────────────────╮{reset}\r\n".encode()
+    content += f"UTF-8 Test:\n".encode()
+    content += f"          {border_color}╭────────────────────────────────────────────────────────────╮{reset}\n".encode()
     
     # Language tests with proper alignment - match exact spacing from original
     languages = [
@@ -176,20 +176,20 @@ def get_utf8_tests():
     
     for lang, text in languages:
         # Use exact spacing to match the box
-        line = f"{lang} {border_color}│{reset} {text_color}{text}{reset} {border_color}│{reset}\r\n"
+        line = f"{lang} {border_color}│{reset} {text_color}{text}{reset} {border_color}│{reset}\n"
         content += line.encode('utf-8')
     
-    content += f"          {border_color}╰────────────────────────────────────────────────────────────╯{reset}\r\n\r\n".encode()
+    content += f"          {border_color}╰────────────────────────────────────────────────────────────╯{reset}\n\n".encode()
     
     return content
 
 def get_emoji_tests():
     """Generate comprehensive emoji tests"""
-    content = b"""   What follows next is a veritable Noah's ark of animal emoji, for your\r\nviewing pleasure, courtesy of Rahjiii's imagination. There should be a space between each glyph.\r\n\r\nPage U+1f400\r\n"""
+    content = b"""   What follows next is a veritable Noah's ark of animal emoji, for your\nviewing pleasure, courtesy of Rahjiii's imagination. There should be a space between each glyph.\n\nPage U+1f400\n"""
     
     # Properly aligned header and border
-    content += "    0 1 2 3 4 5 6 7 8 9 a b c d e f\r\n".encode('utf-8')
-    content += "  ╭────────────────────────────────\r\n".encode('utf-8')
+    content += "    0 1 2 3 4 5 6 7 8 9 a b c d e f\n".encode('utf-8')
+    content += "  ╭────────────────────────────────\n".encode('utf-8')
     
     # Generate emoji grid (Unicode page U+1F400 to U+1F4FF)
     for row in range(16):
@@ -204,13 +204,13 @@ def get_emoji_tests():
                     content += "  ".encode()
             else:
                 content += "  ".encode()
-        content += b"\r\n"
+        content += b"\n"
     
     return content
 
 def get_link_tests():
     """Generate link support tests"""
-    content = b"\r\n"
+    content = b"\n"
     
     # Colors for link tests - same as UTF-8 section
     label_color = "\033[38;5;238m"  # Dark gray for labels
@@ -218,19 +218,19 @@ def get_link_tests():
     reset = "\033[0m"
     
     # Regular text URL (not a link)
-    content += f"{label_color}NOT a link - {reset}https://www.mudvault.org\r\n".encode()
+    content += f"{label_color}NOT a link - {reset}https://www.mudvault.org\n".encode()
     
     # OSC8 hyperlink - only the URL is clickable
-    content += f"{label_color}Https link - {reset}\033]8;;https://www.mudvault.org\007https://www.mudvault.org\033]8;;\007\r\n".encode()
+    content += f"{label_color}Https link - {reset}\033]8;;https://www.mudvault.org\007https://www.mudvault.org\033]8;;\007\n".encode()
     
     # Another OSC8 link with display text - only the display text is clickable
-    content += f"{label_color}Https link - {reset}Check out the \033]8;;https://www.mudvault.org\007MUD Client Test Server!\033]8;;\007\r\n".encode()
+    content += f"{label_color}Https link - {reset}Check out the \033]8;;https://www.mudvault.org\007MUD Client Test Server!\033]8;;\007\n".encode()
     
     # Send links (MUD command links) - only quoted text is gold and clickable
-    content += f"{label_color}Send links - {reset}Want more? \033]8;;send:say please\007{content_color}'say please'{reset}\033]8;;\007 \033]8;;send:say no thanks\007{content_color}'say no thanks'{reset}\033]8;;\007.\r\n".encode()
+    content += f"{label_color}Send links - {reset}Want more? \033]8;;send:say please\007{content_color}'say please'{reset}\033]8;;\007 \033]8;;send:say no thanks\007{content_color}'say no thanks'{reset}\033]8;;\007.\n".encode()
     
     # Prompt link - only quoted text is gold and clickable
-    content += f"{label_color}Prompt link- {reset}How many do you want? \033]8;;send:buy \007{content_color}'buy <quantity>'{reset}\033]8;;\007\r\n\r\n".encode()
+    content += f"{label_color}Prompt link- {reset}How many do you want? \033]8;;send:buy \007{content_color}'buy <quantity>'{reset}\033]8;;\007\n\n".encode()
     
     return content
 
@@ -247,19 +247,16 @@ def baudtest_handler(telnet):
     
     # Send UTF-8 tests at normal speed
     utf8_tests = get_utf8_tests()
-    telnet.sendall(utf8_tests)
+    telnet.send_text(utf8_tests)
     
     # Send emoji tests at normal speed
     emoji_tests = get_emoji_tests()
-    telnet.sendall(emoji_tests)
+    telnet.send_text(emoji_tests)
     
     # Send link tests at normal speed
     link_tests = get_link_tests()
-    telnet.sendall(link_tests)
+    telnet.send_text(link_tests)
     
     # Final message
-    telnet.sendall(b"\r\n   And that's that. Hope it all worked out for you!\r\n\r\n")
+    telnet.send_text("\n   And that's that. Hope it all worked out for you!\n\n")
     
-    # IMPORTANT: Turn echo back to the client
-    telnet.sock.send(bytes([IAC, WONT, ECHO]))  # Server will NOT echo anymore
-    telnet.sock.send(bytes([IAC, DONT, ECHO]))  # Client should resume local echo

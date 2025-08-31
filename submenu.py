@@ -1,5 +1,5 @@
 from testdata import ANSI_TEST, UTF8_TEST, MCCP2_TEST
-from mudsocket import send, slowsend
+from mudsocket import bytes_sender, bytes_slow_sender, text_sender, text_slow_sender
 from nawstest import nawstest_handler
 from optionscan import optionscan_handler
 from emptysubneg import emptysubneg_handler
@@ -8,16 +8,15 @@ from ttype import ttype_handler
 from baudtest import baudtest_handler
 from xterm256 import xterm256_handler
 from truecolor import truecolor_handler
-from mccp4 import mccp4_handler_zstd, mccp4_handler_deflate
+from mccp4 import mccp4_handler_zstd
 from base_submenu import BaseSubmenu, CompressionSubmenu
 
 
 # Define options once per category
 COMPRESSION_OPTIONS = {
-    "mccp2": ("MCCP2 (zlib)", send(MCCP2_TEST, newline_replace=False)),
-    "mccp2_slow": ("MCCP2 (slow)", slowsend(MCCP2_TEST, newline_replace=False)),
+    "mccp2": ("MCCP2 (zlib)", bytes_sender(MCCP2_TEST)),
+    "mccp2_slow": ("MCCP2 (slow)", bytes_slow_sender(MCCP2_TEST)),
     "mccp4": ("MCCP4 (zstd)", mccp4_handler_zstd),
-    "mccp4_deflate": ("MCCP4 (deflate)", mccp4_handler_deflate),
 }
 
 def compression_submenu(telnet):
@@ -41,8 +40,8 @@ def telnet_submenu(telnet):
 
 
 DISPLAY_OPTIONS = {
-    "ansi": ("ANSI colors", send(ANSI_TEST)),
-    "ansi_slow": ("ANSI colors (slow)", slowsend(ANSI_TEST)),
+    "ansi": ("ANSI colors", text_sender(ANSI_TEST)),
+    "ansi_slow": ("ANSI colors (slow)", text_slow_sender(ANSI_TEST)),
     "xterm256": ("xterm 256 colors", xterm256_handler),
     "truecolor": ("True color (24-bit)", truecolor_handler),
 }
@@ -54,8 +53,8 @@ def display_submenu(telnet):
 
 
 ENCODING_OPTIONS = {
-    "utf": ("UTF-8 text", send(UTF8_TEST)),
-    "utf_slow": ("UTF-8 text (slow)", slowsend(UTF8_TEST)),
+    "utf": ("UTF-8 text", text_sender(UTF8_TEST)),
+    "utf_slow": ("UTF-8 text (slow)", text_slow_sender(UTF8_TEST)),
 }
 
 def encoding_submenu(telnet):

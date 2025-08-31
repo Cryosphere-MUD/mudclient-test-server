@@ -1,14 +1,10 @@
 import socket
 import time
 
-def send(data, newline_replace=True):
-    if newline_replace:
-        data = data.replace(b"\n", b"\r\n")
-    return lambda telnet: telnet.sendall(data, False)
+def bytes_sender(data):
+    return lambda telnet: telnet.send_bytes(data, False)
 
-def slowsend(data, newline_replace=True):
-    if newline_replace:
-        data = data.replace(b"\n", b"\r\n")
+def bytes_slow_sender(data):
     def fn(telnet):
         view = memoryview(data)
         while view:
@@ -16,6 +12,14 @@ def slowsend(data, newline_replace=True):
             view = view[n:]
             time.sleep(0.1)
     return fn
+
+def text_sender(text):
+    data = text.encode().replace(b"\n", b"\r\n")
+    return lambda telnet: telnet.send_bytes(data)
+
+def text_slow_sender(text):
+    data = text.encode().replace(b"\n", b"\r\n")
+    return bytes_slow_sender(data)
 
 def send_slow_baud(telnet, text, bps=1200):
     """Send text at specified bits per second (simulating old modem speeds)"""

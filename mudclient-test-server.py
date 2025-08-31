@@ -19,12 +19,12 @@ PORT = 5050
 def handle_client(conn: socket.socket, addr):
     telnet = TelnetState(conn)
 
-    telnet.sendall(HELLO)
+    telnet.send_text(HELLO)
 
     try:
         while True:
             telnet.reset()
-            telnet.sendall(MENU)
+            telnet.send_text(MENU)
 
             decoded = telnet.readline()
 
@@ -33,10 +33,10 @@ def handle_client(conn: socket.socket, addr):
 
             if not optionhandler:
                 if option:  # Only show error if they actually typed something
-                    telnet.sendall(f"Unknown option: {option}\r\n".encode())
+                    telnet.send_text(f"Unknown option: {option}\n".encode())
                     continue
 
-            optionhandler(telnet)
+            optionhandler[1](telnet)
 
     finally:
         conn.close()
