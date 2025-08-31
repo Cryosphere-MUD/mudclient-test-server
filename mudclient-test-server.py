@@ -9,7 +9,9 @@ import datetime
 
 from baudtest import baudtest_handler
 
-from menu import HELLO, OPTIONS, MENU
+from tests import OPTIONS, CATEGORIES
+
+from menu import HELLO, MENU
 
 from telnet import TelnetState
 
@@ -21,14 +23,26 @@ def handle_client(conn: socket.socket, addr):
 
     telnet.send_text(HELLO)
 
+    category = None
+
     try:
         while True:
             telnet.reset()
-            telnet.send_text(MENU)
+            
+            if category is None:            
+                telnet.send_text(MENU)
+            else:
+                for key, item in category.items():
+                    telnet.send_text(f"  {key:15} - {item[0]}\n")
 
             decoded = telnet.readline()
 
             option = decoded.split()[0] if decoded.split() else ""
+            
+            if new_cat := CATEGORIES.get(option):
+                category = new_cat
+                continue
+            
             optionhandler = OPTIONS.get(option)
 
             if not optionhandler:
