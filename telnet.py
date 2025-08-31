@@ -12,8 +12,8 @@ class TelnetState:
                 self.do = {}
                 self.dont = {}
                 self.subneg_handlers = {}
-                self.neg_handler = None
-
+                self.neg_handler = None             
+                self.compression_used = None
                 self.lineending = None
                 self.dataline = None
 
