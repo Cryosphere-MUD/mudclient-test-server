@@ -6,8 +6,8 @@ from emptysubneg import emptysubneg_handler
 from echo import echo_handler
 from ttype import ttype_handler
 from baudtest import baudtest_handler
-from xterm256 import xterm256_handler
-from truecolor import truecolor_handler
+from xterm256 import XTERM256_TEST
+from truecolor import TRUECOLOR_TEST
 from mccp4 import mccp4_handler_zstd
 from base_submenu import BaseSubmenu, CompressionSubmenu
 
@@ -42,9 +42,12 @@ def telnet_submenu(telnet):
 DISPLAY_OPTIONS = {
     "ansi": ("ANSI colors", text_sender(ANSI_TEST)),
     "ansi_slow": ("ANSI colors (slow)", text_slow_sender(ANSI_TEST)),
-    "xterm256": ("xterm 256 colors", xterm256_handler),
-    "truecolor": ("True color (24-bit)", truecolor_handler),
+    "xterm256": ("xterm 256 colors", text_sender(XTERM256_TEST)),
+    "xterm256_slow": ("xterm 256 colors", text_slow_sender(XTERM256_TEST)),
+    "truecolor": ("True color (24-bit)", text_sender(TRUECOLOR_TEST)),
+    "truecolor_slow": ("True color (24-bit)", text_slow_sender(TRUECOLOR_TEST)),
 }
+
 
 def display_submenu(telnet):
     """Handle display/color test submenu using BaseSubmenu class."""
