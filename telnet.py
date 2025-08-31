@@ -21,11 +21,17 @@ class TelnetState:
                 self.subneg_handlers = {}
                 self.neg_handler = None
 
-        def sendall(self, data, newline_replace = True):
+        def send_bytes(self, data):
                 if isinstance(data, str):
                         data = data.encode()
-                if newline_replace:
-                        data = data.replace(b"\n", b"\r\n")
+                view = memoryview(data)
+                while view:
+                        n = self.sock.send(view)
+                        view = view[n:]
+
+        def send_text(self, data):
+                if isinstance(data, str):
+                        data = data.encode()
                 view = memoryview(data)
                 while view:
                         n = self.sock.send(view)

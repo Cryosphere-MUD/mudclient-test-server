@@ -20,12 +20,12 @@ ANSI_TEST = """
 \033[8m hidden\033[m     \033[9mstrikethrough\033[m
 \033[20m fraktur\033[m   \033[21mdouble underline\033[m and \033[53moverline\033[m
 
-""".encode()
+"""
 
 try:
-    UTF8_TEST = open("utf8-test.txt", "rb").read()
+    UTF8_TEST = open("utf8-test.txt", "r").read()
 except FileNotFoundError:
-    UTF8_TEST = b"UTF-8 test file not found"
+    UTF8_TEST = "UTF-8 test file not found"
 
 
 MCCP2_TEST = (b"""1. Note that this test is a unilateral negotiation, i.e the server\r\n2. does not wait for the response before starting compression.\r\n""" + 

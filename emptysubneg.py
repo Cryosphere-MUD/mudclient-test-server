@@ -9,6 +9,6 @@ def emptysubneg_handler(telnetstate):
         for byte in range(0, 0xff):
                 scan += bytes([IAC, SB, byte, IAC, SE])
 
-        telnetstate.sendall(scan, False)
+        telnetstate.send_bytes(scan, False)
 
-        telnetstate.sendall("sent empty subnegotiations for every option to the client\n")
+        telnetstate.send_text("sent empty subnegotiations for every option to the client\n")

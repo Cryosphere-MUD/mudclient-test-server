@@ -18,10 +18,10 @@ class BaseSubmenu:
         
     def create_submenu_text(self):
         """Create formatted submenu text."""
-        menu_text = f"\r\n{self.title}\r\n" + "=" * len(self.title) + "\r\n"
+        menu_text = f"\n{self.title}\n" + "=" * len(self.title) + "\n"
         for key, (desc, _) in self.options.items():
-            menu_text += f"  {key:<15} - {desc}\r\n"
-        menu_text += "\r\nType 'back' to return to main menu, or choose an option: "
+            menu_text += f"  {key:<15} - {desc}\n"
+        menu_text += "\nType 'back' to return to main menu, or choose an option: "
         return menu_text.encode()
     
     def handle_option(self, option, telnet):
@@ -41,14 +41,14 @@ class BaseSubmenu:
             return False  # Exit submenu after normal test
         
         if option:  # Only show error if they actually typed something
-            telnet.sendall(f"Unknown option: {option}\r\n".encode())
+            telnet.send_text(f"Unknown option: {option}\n".encode())
         
         return True  # Continue loop
     
     def run(self, telnet):
         """Main submenu loop."""
         while True:
-            telnet.sendall(self.create_submenu_text())
+            telnet.send_text(self.create_submenu_text())
             decoded = telnet.readline()
             option = decoded.split()[0] if decoded.split() else ""
             
@@ -96,9 +96,9 @@ class CompressionSubmenu(BaseSubmenu):
                 pass
             else:
                 # Different group - require reconnection
-                telnet.sendall(f"\r\nCannot mix different compression protocols in the same session.\r\n".encode())
-                telnet.sendall(f"You've already used: {telnet.compression_used}\r\n".encode())
-                telnet.sendall(f"To test {option_group}, please reconnect and try again.\r\n".encode())
+                telnet.send_text(f"\nCannot mix different compression protocols in the same session.\n".encode())
+                telnet.send_text(f"You've already used: {telnet.compression_used}\n".encode())
+                telnet.send_text(f"To test {option_group}, please reconnect and try again.\n".encode())
                 return True
             
             # Run the test
@@ -107,16 +107,16 @@ class CompressionSubmenu(BaseSubmenu):
                 handler(telnet)
                 if telnet.compression_used == option_group:
                     # Same group - can run more
-                    telnet.sendall(b"\r\nTest completed. You can run other tests in the same group.\r\n")
+                    telnet.send_text(b"\nTest completed. You can run other tests in the same group.\n")
                 else:
                     # Different group - warn about reconnection
-                    telnet.sendall(b"\r\nTest completed. Reconnect to test different compression protocols.\r\n")
+                    telnet.send_text(b"\nTest completed. Reconnect to test different compression protocols.\n")
             except Exception as e:
-                telnet.sendall(f"\r\nTest failed: {e}\r\n".encode())
+                telnet.send_text(f"\nTest failed: {e}\n".encode())
             
             return True  # Stay in compression submenu
         
         if option:
-            telnet.sendall(f"Unknown option: {option}\r\n".encode())
+            telnet.send_text(f"Unknown option: {option}\n".encode())
         
         return True

@@ -1,45 +1,45 @@
 def truecolor_handler(telnet):
     """Test 24-bit truecolor (RGB) support"""
     
-    content = b"=== TrueColor (24-bit RGB) Test ===\r\n\r\n"
+    content = b"=== TrueColor (24-bit RGB) Test ===\n\n"
     
     # RGB spectrum test
-    content += b"RGB Spectrum:\r\n"
+    content += b"RGB Spectrum:\n"
     for r in range(0, 256, 32):
         for g in range(0, 256, 32):
             for b in range(0, 256, 64):
                 content += f"\033[38;2;{r};{g};{b}m\u2588\033[0m".encode()
             content += b" "
-        content += b"\r\n"
-    content += b"\r\n"
+        content += b"\n"
+    content += b"\n"
     
     # Red gradient
-    content += b"Red Gradient:\r\n"
+    content += b"Red Gradient:\n"
     for i in range(0, 256, 4):
         content += f"\033[38;2;{i};0;0m\u2588\033[0m".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     # Green gradient
-    content += b"Green Gradient:\r\n"
+    content += b"Green Gradient:\n"
     for i in range(0, 256, 4):
         content += f"\033[38;2;0;{i};0m\u2588\033[0m".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     # Blue gradient
-    content += b"Blue Gradient:\r\n"
+    content += b"Blue Gradient:\n"
     for i in range(0, 256, 4):
         content += f"\033[38;2;0;0;{i}m\u2588\033[0m".encode()
-    content += b"\r\n\r\n"
+    content += b"\n\n"
     
     # Background truecolor test
-    content += b"Background TrueColor:\r\n"
+    content += b"Background TrueColor:\n"
     colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
     for r, g, b in colors:
         content += f"\033[48;2;{r};{g};{b}m\033[38;2;0;0;0m RGB({r},{g},{b}) \033[0m ".encode()
-    content += b"\r\n\r\n"
+    content += b"\n\n"
     
     # Rainbow gradient
-    content += b"Rainbow Gradient:\r\n"
+    content += b"Rainbow Gradient:\n"
     for i in range(60):
         # Create a rainbow using HSV to RGB conversion
         hue = i * 6  # 0-360 degrees
@@ -57,10 +57,10 @@ def truecolor_handler(telnet):
             r, g, b = 255, 0, int((360 - hue) * 255 / 60)
         
         content += f"\033[38;2;{r};{g};{b}m\u2588\033[0m".encode()
-    content += b"\r\n\r\n"
+    content += b"\n\n"
     
     # Gray gradients with different step sizes (limited to 70 chars)
-    content += b"TrueColor Gray Gradients:\r\n"
+    content += b"TrueColor Gray Gradients:\n"
     for step in [1, 2, 4, 8]:
         content += f"Step {step}: ".encode()
         char_count = 8  # "Step X: " is 8 chars
@@ -69,11 +69,11 @@ def truecolor_handler(telnet):
                 break
             content += f"\033[38;2;{i};{i};{i}m\u2588\033[0m".encode()
             char_count += 1
-        content += b"\r\n"
-    content += b"\r\n"
+        content += b"\n"
+    content += b"\n"
     
     # TrueColor gradient text examples
-    content += b"TrueColor Gradient Text:\r\n\r\n"
+    content += b"TrueColor Gradient Text:\n\n"
     
     # Fire gradient text
     text1 = "TrueColor fire gradient text"
@@ -94,7 +94,7 @@ def truecolor_handler(telnet):
                 g = int(165 + (progress - 0.5) * 2 * 90)  # 165 to 255
                 b = 0
             content += f"\033[38;2;{r};{g};{b}m{char}\033[0m".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     # Ocean gradient text
     text2 = "Deep ocean to sky gradient"
@@ -122,7 +122,7 @@ def truecolor_handler(telnet):
                 g = int(255 - p * 49)  # 255 to 206
                 b = 255
             content += f"\033[38;2;{r};{g};{b}m{char}\033[0m".encode()
-    content += b"\r\n"
+    content += b"\n"
     
     # Purple to pink gradient
     text3 = "Purple dreams to pink reality"
@@ -136,6 +136,6 @@ def truecolor_handler(telnet):
             g = int(0 + progress * 192)    # 0 to 192
             b = int(128 + progress * 75)   # 128 to 203
             content += f"\033[38;2;{r};{g};{b}m{char}\033[0m".encode()
-    content += b"\r\n\r\n"
+    content += b"\n\n"
     
-    telnet.sendall(content)
+    telnet.send_text(content)
