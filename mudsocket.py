@@ -2,7 +2,7 @@ import socket
 import time
 
 def bytes_sender(data):
-    return lambda telnet: telnet.send_bytes(data, False)
+    return lambda telnet: telnet.send_bytes(data)
 
 def bytes_slow_sender(data):
     def fn(telnet):

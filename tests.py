@@ -6,6 +6,7 @@ from emptysubneg import emptysubneg_handler
 from echo import echo_handler
 from ttype import ttype_handler
 from baudtest import baudtest_handler, misc_handler
+from mxp import MXP_TEST
 from xterm256 import XTERM256_TEST
 from truecolor import TRUECOLOR_TEST
 from mccp4 import mccp4_handler_zstd
@@ -31,6 +32,8 @@ CATEGORIES = {
         "xterm256_slow": ("xterm 256 colors", text_slow_sender(XTERM256_TEST)),
         "truecolor": ("True color (24-bit)", text_sender(TRUECOLOR_TEST)),
         "truecolor_slow": ("True color (24-bit)", text_slow_sender(TRUECOLOR_TEST)),
+        "mxp": ("MXP", bytes_sender(MXP_TEST)),
+        "mxp_slow": ("MXP", bytes_slow_sender(MXP_TEST)),
     },
     "encoding": {
         "utf": ("UTF-8 text", text_sender(UTF8_TEST)),
