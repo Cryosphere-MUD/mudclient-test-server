@@ -260,3 +260,12 @@ def baudtest_handler(telnet):
     # Final message
     telnet.send_text("\n   And that's that. Hope it all worked out for you!\n\n")
     
+
+def misc_handler(telnet):
+    """Comprehensive client capability test"""
+    
+    telnet.send_text(get_color_tests())
+    telnet.send_text(get_utf8_tests())    
+    telnet.send_text(get_emoji_tests())
+    telnet.send_text(get_link_tests())
+    
