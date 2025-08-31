@@ -1,4 +1,4 @@
-from submenu import MAIN_CATEGORIES
+from submenu import MAIN_CATEGORIES, ALL_OPTIONS
 
 def create_menu():
     menu_text = "\r\nMain Menu\r\n=========\r\n"
@@ -23,4 +23,4 @@ HELLO = (
 
 MENU = create_menu()
 
-OPTIONS = MAIN_CATEGORIES
+OPTIONS = ALL_OPTIONS
