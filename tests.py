@@ -5,7 +5,7 @@ from optionscan import optionscan_handler
 from emptysubneg import emptysubneg_handler
 from echo import echo_handler
 from ttype import ttype_handler
-from baudtest import baudtest_handler
+from baudtest import baudtest_handler, misc_handler
 from xterm256 import XTERM256_TEST
 from truecolor import TRUECOLOR_TEST
 from mccp4 import mccp4_handler_zstd
@@ -35,6 +35,10 @@ CATEGORIES = {
     "encoding": {
         "utf": ("UTF-8 text", text_sender(UTF8_TEST)),
         "utf_slow": ("UTF-8 text (slow)", text_slow_sender(UTF8_TEST)),
+    },
+    "general": {
+        "combined": ("combined misc test", misc_handler),
+        "combined_slow": ("combined misc test (slow)", baudtest_handler),
     }
 }
 
