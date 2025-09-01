@@ -7,8 +7,6 @@ import zlib
 import struct
 import datetime
 
-from baudtest import baudtest_handler
-
 from tests import OPTIONS, CATEGORIES
 
 from menu import HELLO, MENU
@@ -40,6 +38,7 @@ def handle_client(conn: socket.socket, addr):
             option = decoded.split()[0] if decoded.split() else ""
             
             if new_cat := CATEGORIES.get(option):
+                telnet.send_text("Choose a specific test, or another category.\n")
                 category = new_cat
                 continue
             
