@@ -5,12 +5,13 @@ from optionscan import optionscan_handler
 from emptysubneg import emptysubneg_handler
 from echo import echo_handler
 from ttype import ttype_handler
-from baudtest import baudtest_handler, misc_handler
+from osc8 import OSC8_TEST
 from mxp import MXP_TEST
 from xterm256 import XTERM256_TEST
 from truecolor import TRUECOLOR_TEST
 from mccp4 import mccp4_handler_zstd
-from base_submenu import BaseSubmenu, CompressionSubmenu
+from combined import combined_handler, combined_handler_slow
+from emoji import EMOJI_TEST
 
 CATEGORIES = {
     "compression": {
@@ -34,14 +35,18 @@ CATEGORIES = {
         "truecolor_slow": ("True color (24-bit)", text_slow_sender(TRUECOLOR_TEST)),
         "mxp": ("MXP", bytes_sender(MXP_TEST)),
         "mxp_slow": ("MXP", bytes_slow_sender(MXP_TEST)),
+        "link": ("MXP", bytes_sender(OSC8_TEST)),
+        "link_slow": ("MXP", bytes_slow_sender(OSC8_TEST)),
     },
     "encoding": {
         "utf": ("UTF-8 text", text_sender(UTF8_TEST)),
         "utf_slow": ("UTF-8 text (slow)", text_slow_sender(UTF8_TEST)),
+        "emoji": ("Animal emoji", text_sender(EMOJI_TEST)),
+        "emoji_slow": ("Animal emoji (slow)", text_slow_sender(EMOJI_TEST)),
     },
     "general": {
-        "combined": ("combined misc test", misc_handler),
-        "combined_slow": ("combined misc test (slow)", baudtest_handler),
+        "combined": ("combined misc test", combined_handler),
+        "combined_slow": ("combined misc test (slow)", combined_handler_slow),
     }
 }
 
