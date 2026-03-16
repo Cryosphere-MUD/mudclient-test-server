@@ -35,8 +35,8 @@ CATEGORIES = {
         "truecolor_slow": ("True color (24-bit)", text_slow_sender(TRUECOLOR_TEST)),
         "mxp": ("MXP", bytes_sender(MXP_TEST)),
         "mxp_slow": ("MXP", bytes_slow_sender(MXP_TEST)),
-        "link": ("MXP", bytes_sender(OSC8_TEST)),
-        "link_slow": ("MXP", bytes_slow_sender(OSC8_TEST)),
+        "link": ("MXP", text_sender(OSC8_TEST)),
+        "link_slow": ("MXP", text_slow_sender(OSC8_TEST)),
     },
     "encoding": {
         "utf": ("UTF-8 text", text_sender(UTF8_TEST)),
