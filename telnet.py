@@ -1,3 +1,4 @@
+import time
 from telnetconstants import IAC, WILL, DO, DONT, WONT, SE, SB
 
 class TelnetState:
@@ -28,6 +29,12 @@ class TelnetState:
                 while view:
                         n = self.sock.send(view)
                         view = view[n:]
+
+        def slow_send_bytes(self, data):
+                while data:
+                        n = self.sock.send(data[0:15])
+                        data = data[n:]
+                        time.sleep(0.1)
 
         def send_text(self, data):
                 if isinstance(data, str):
