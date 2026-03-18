@@ -7,10 +7,7 @@ def bytes_sender(data):
 def bytes_slow_sender(data):
     def fn(telnet):
         view = memoryview(data)
-        while view:
-            n = telnet.sock.send(view[0:15])
-            view = view[n:]
-            time.sleep(0.1)
+        telnet.slow_send_bytes(view)
     return fn
 
 def text_sender(text):

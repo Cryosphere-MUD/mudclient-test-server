@@ -21,8 +21,10 @@ CATEGORIES = {
     },
     "telnet": {
         "naws": ("NAWS (window size)", nawstest_handler),
-        "optionscan": ("Option scanning", optionscan_handler),
-        "emptysubneg": ("Empty subnegotiations", emptysubneg_handler),
+        "optionscan": ("Option scanning", optionscan_handler(False)),
+        "optionscan_slow": ("Option scanning (slow)", optionscan_handler(True)),
+        "emptysubneg": ("Empty subnegotiations", emptysubneg_handler(False)),
+        "emptysubneg_slow": ("Empty subnegotiations (slow)", emptysubneg_handler(True)),
         "echo": ("Echo option", echo_handler),
         "ttype": ("Terminal type", ttype_handler),
     },
